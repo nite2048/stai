@@ -1,5 +1,5 @@
 import express from "express";
-import {handlePostReq} from './genai.js'
+import {testAPI} from './genai.js'
 
 const app = express();
 
@@ -17,9 +17,9 @@ app.listen(3000);
 
 app.post("/test/:name", async (request, response) => {
      let path = "./lib/" + request.params.name + ".jpg";
-     
+
      try {
-          const data = await handlePostReq(path);
+          const data = await testAPI(path);
           response.status(200).json(data);
      } catch (error) {
           response.status(500).json({ error: "Internal server error" });
