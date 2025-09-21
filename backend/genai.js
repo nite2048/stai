@@ -20,7 +20,7 @@ async function acquireMetadata(imageFile) {
      ];
 
      const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: "gemini-2.5-pro",
           config: {
                systemInstruction: fs.readFileSync(
                     "metadataSystemInstructions.txt",
@@ -29,31 +29,33 @@ async function acquireMetadata(imageFile) {
           },
           contents: contents,
      });
-     return parseMarkdown(response.text);
-}
-//FIXME: Loner gf manga identifies incorectly as a tv show (T-T kill me now)
-//FIXME: IT CANT FUCKING DIFFERENTIATE BETWEEN PUNCTUATIONS AND "OR" OR "AND"
-// Maybe use a better model
 
+     // Extract text and handle edge cases
+     let responseText;
+     if (response.text) {
+          responseText = typeof response.text === 'function' ? response.text() : response.text;
+     } else if (response.candidates && response.candidates[0]) {
+          responseText = response.candidates[0].content.parts[0].text;
+     } else {
+          console.error("Unable to extract text from response:", response);
+          return null;
+     }
+
+     console.log("Response text:", responseText);
+     return parseMarkdown(responseText);
+}
 
 async function handleApiCalls(data, isAdult = true) {
      if (!Category.match(data.category)) {
           throw new Error(`Invalid category: ${data.category}. Valid categories are: ${Object.values(Category).join(", ")}`);
      }
 
-     let query;
-     const validCategory = Category.match(data.category); // This is a 'Symbol'; check if type errors occur
+     const validCategory = Category.match(data.category);
 
      // Preferntial usage of name in order to ensure that the most common name is used, still experimental
-     // Initially implemented cuz i ran into some edge cases with the Takopi screenshot
-     // Seems logical enough but it is definately a temporary fix
-     
-     if(data.translatedName != "" || data.translatedName != null || data.translatedName != undefined){
-          query = data.translatedName;
-     }else if(data.transliteratedName != "" || data.transliteratedName != null || data.transliteratedName != undefined){
-          query = data.transliteratedName;
-     }else if(data.name != "" || data.name != null || data.name != undefined){
-          query = data.name;
+     const query = data.translatedName || data.transliteratedName || data.name;
+     if (!query) {
+         throw new Error("No valid name found in metadata");
      }
 
      if (validCategory === Category.tv || validCategory === Category.movie) {
@@ -79,20 +81,19 @@ async function tmdb(query, category, isAdult = true) {
           },
      };
 
-     return fetch(url, options)
-          .then((res) => {
-               return res.json();
-          })
-          .then((json) => {
-               return json;
-          })
-          .catch((err) => {
-               throw err;
-          });
-}
+     try {
+          const res = await fetch(url, options);
+          const json = await res.json();
 
-//TODO: Implement error case when there are no search results, also first check the type of return variables
-//TODO: update closestMatchSystemInstructions to reflect the new anilist api (also remove ambiguity of the return type)
+          if(json.total_results === 0) {
+               throw new Error(`No search results found for "${query}"`);
+          }
+
+          return json.results; // Returns array
+     } catch (err) {
+          throw err;
+     }
+}
 
 async function anilist(searchName) {
   const query = `
@@ -147,6 +148,10 @@ async function anilist(searchName) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
+    if(data.data.Page.media.length === 0){
+         throw new Error(`No results found for ${searchName}`);
+    }
+
     return data.data.Page.media; //Returns only the array of results
 
   } catch (error) {
@@ -155,18 +160,24 @@ async function anilist(searchName) {
 }
 
 async function closestMatch(metaData, queryData) {
-     const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          config: {
-               systemInstruction: fs.readFileSync(
-                    "closestMatchSystemInstructions.txt",
-                    "utf8",
-               ),
-          },
-          contents: `The basic object: ${JSON.stringify(metaData)} \n The query response: ${JSON.stringify(queryData)} \n`,
-     });
+     if (queryData.length === 0) {
+          throw new Error(`No search results found`);
+     } else if (queryData.length === 1) {
+          return queryData[0];
+     } else {
+          const response = await ai.models.generateContent({
+               model: "gemini-2.5-flash",
+               config: {
+                    systemInstruction: fs.readFileSync(
+                         "closestMatchSystemInstructions.txt",
+                         "utf8",
+                    ),
+               },
+               contents: `The basic object: ${JSON.stringify(metaData)} \n The query response: ${JSON.stringify(queryData)} \n`,
+          });
 
-     return parseMarkdown(response.text);
+          return parseMarkdown(response.text);
+     }
 }
 
 export async function testAPI(path) {
@@ -199,7 +210,6 @@ export async function testAPI(path) {
 
           console.log("🎨 STEP 5: Reconciling final object data...");
           let finalResult = reconcileObjectData(mergedData, metaData.category);
-
 
           console.log("✅ STEP 5 COMPLETED: Object data reconciled");
           console.log("📊 Final result:", JSON.stringify(finalResult, null, 2));
@@ -243,22 +253,28 @@ function reconcileObjectData(data){
           throw new Error(`Empty object or Invalid category: ${data.category}. Valid categories are: ${Object.values(Category).join(", ")}`);
      }
 
-     const validCategory = Category.match(data.category); // This is a 'Symbol'; check if type errors occur
+     const validCategory = Category.match(data.category);
 
      if (validCategory === Category.tv || validCategory === Category.movie) {
-          console.log("tv & movie")
+          // Source: https://www.themoviedb.org/talk/5daf6eb0ae36680011d7e6ee
+          const genreId = { 28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime", 99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History", 27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance", 878: "Science Fiction", 10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western" };
+          let mappedGenres = [];
+          for(const id of data.genre_ids){
+               mappedGenres.push(genreId[id])
+          }
+
           const obj = {
                description : data.overview,
                title: {
                     name : data.name,
-                    originalName: data.originalName,
-                    transliteratedName : (data.transliteratedName != "" || data.transliteratedName != null || data.transliteratedName != undefined) ? data.transliteratedName : null
+                    originalName: data.original_name,
+                    transliteratedName : data.transliteratedName || "Not found"
                },
                category: data.category,
-               genres: data.genre,
-               startDate: data.firstAirDate,
-               averageScore: data.voteAverage,
-               coverImage : `https://image.tmdb.org/t/p/original/${data.posterPath}`
+               genres: mappedGenres,
+               startDate: data.first_air_date,
+               averageScore: data.vote_average,
+               coverImage : `https://image.tmdb.org/t/p/original/${data.poster_path}`
           }
           return obj
      } else if (validCategory === Category.manga) {
@@ -267,12 +283,12 @@ function reconcileObjectData(data){
           const obj = {
                description : data.description,
                title: {
-                    name : data.title.english, // Api names are preffered over the metaData ones
+                    name : data.title.english || data.name,
                     originalName: data.title.native,
                     transliteratedName : data.title.romaji
                },
                category: data.category,
-               genres: data.genres[0],
+               genres: data.genres,
                startDate: data.startDate.year,
                averageScore: data.averageScore,
                coverImage : data.coverImage.extraLarge
@@ -283,27 +299,39 @@ function reconcileObjectData(data){
      }else {
           throw new Error(`Unhandled category: ${data.category}`);
      }
-}
-// TODO: Deal with genre discrepancies properly (i hate it) 
-// Both tmdb and anilist send genre arrays map them properly. tmdb sends genre ids for some reason so send another api request to retrieve the genres
-// Deal with array mapping cause its insane
+} // TODO: Figure out what to do if some of the atrributes are null (api's fault)
 
 function parseMarkdown(markdownString) {
-     const regex = /```(?:javascript\s*(?:\{[^{}]*\})?)?\s*({[\s\S]*?})\s*```/;
-     const match = markdownString.match(regex);
+     // First, try the original markdown code block pattern
+     const codeBlockRegex = /```(?:javascript|json)?\s*({[\s\S]*?})\s*```/;
+     let match = markdownString.match(codeBlockRegex);
 
      if (match && match[1]) {
-          const objectString = match[1];
           try {
-               return JSON.parse(objectString);
+               return JSON.parse(match[1]);
           } catch (e) {
-               console.error("Error parsing object string from Markdown:", e);
-               return null;
+               console.error("Error parsing object from code block:", e);
           }
-     } else {
-          console.error(
-               "No valid JavaScript object found within a code block.",
-          );
+     }
+
+     // If no code block, try to find JSON object directly
+     const jsonRegex = /\{[\s\S]*\}/;
+     match = markdownString.match(jsonRegex);
+
+     if (match) {
+          try {
+               return JSON.parse(match[0]);
+          } catch (e) {
+               console.error("Error parsing JSON object:", e);
+          }
+     }
+
+     // If still no match, try to extract just the response text and see if it's valid JSON
+     try {
+          return JSON.parse(markdownString.trim());
+     } catch (e) {
+          console.error("Response is not valid JSON:", e);
+          console.log("Raw response:", markdownString);
           return null;
      }
 }

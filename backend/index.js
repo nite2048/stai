@@ -22,6 +22,6 @@ app.post("/test/:name", async (request, response) => {
           const data = await testAPI(path);
           response.status(200).json(data);
      } catch (error) {
-          response.status(500).json({ error: "Internal server error" });
+          response.status(500).json({ error: `Internal server error: [${error.message}]` });
      }
 });
