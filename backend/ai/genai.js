@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import * as fs from "node:fs";
 import { GoogleGenAI } from "@google/genai";
 
-dotenv.config();
+dotenv.config({quiet: true});
 const ai = new GoogleGenAI({
      apiKey: process.env.GEMINI_API_KEY,
 });
@@ -23,7 +23,7 @@ async function acquireMetadata(imageFile) {
           model: "gemini-2.5-pro",
           config: {
                systemInstruction: fs.readFileSync(
-                    "metadataSystemInstructions.txt",
+                    "./ai/systemInstructions/metadataSystemInstructions.txt",
                     "utf8",
                ),
           },
@@ -169,7 +169,7 @@ async function closestMatch(metaData, queryData) {
                model: "gemini-2.5-flash",
                config: {
                     systemInstruction: fs.readFileSync(
-                         "closestMatchSystemInstructions.txt",
+                         "./ai/systemInstructions/closestMatchSystemInstructions.txt",
                          "utf8",
                     ),
                },
