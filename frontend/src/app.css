@@ -1,5 +1,34 @@
+@font-face {
+    font-family: 'Spock';
+    src: url('../lib/fonts/Spock.woff2') format('woff2'),
+        url('../lib/fonts/Spock.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Saygon';
+    src: url('../lib/fonts/Saygon.woff2') format('woff2'),
+        url('../lib/fonts/Saygon.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 *{
      margin: 0;
      padding: 0;
      box-sizing: border-box;
+     border: none;
+}
+
+:root{
+     --primary: #f1e735;
+     --faded-primary:#fff6569e;
+     --bg: black;
+     --accent: white;
+     --fade: rgba(255, 227, 89);
+     font-family: 'Spock';
+     font-size: 16px;
 }

@@ -259,8 +259,15 @@ function reconcileObjectData(data){
           // Source: https://www.themoviedb.org/talk/5daf6eb0ae36680011d7e6ee
           const genreId = { 28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime", 99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History", 27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance", 878: "Science Fiction", 10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western" };
           let mappedGenres = [];
-          for(const id of data.genre_ids){
-               mappedGenres.push(genreId[id])
+
+          if (!(data.genre_ids.length)) {
+               mappedGenres.push(data.genre_ids)
+          } else if(data.genre_ids.length === 0){
+               mappedGenres.push(genreId[data.genre_ids])
+          }else {
+               for(const id of data.genre_ids){
+                    mappedGenres.push(genreId[id])
+               }
           }
 
           const obj = {

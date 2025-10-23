@@ -1,5 +1,5 @@
 <script>
-  import { token } from './stores.js';
+  import { token } from '../lib/stores.js';
 </script>
 
 <main>

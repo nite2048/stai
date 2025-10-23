@@ -1,16 +1,15 @@
 <script>
      import page from 'page';
-     import { token } from './stores.js';
+     import { token } from './lib/stores.js';
 
-     import Default from './Default.svelte';
-     import Redirect from './Redirect.svelte';
-     import Success from './Success.svelte';
+     import Redirect from './routes/Redirect.svelte';
+     import Success from './routes/Success.svelte';
+     import Upload from './routes/Upload.svelte';
+     let current = Upload;
 
-     let current = Default;
-
-     page('/', () => current = Default);
+     page('/', () => current = Upload);
      page('/success', () => current = Success);
-     
+
      page('/redirect', () => {
           current = Redirect;
           const urlParams = new URLSearchParams(window.location.search);
@@ -22,6 +21,4 @@
      page.start();
 </script>
 
-<main>
-  <svelte:component this={current} />
-</main>
+<svelte:component this={current} />
