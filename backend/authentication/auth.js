@@ -43,7 +43,7 @@ router.get('/github/callback', async (req, res) => {
 
 	const user = await getPrismaUserByGithubAuth(userRes)
 	const payload = { githubId : user.githubId };
-     const token = jwt.sign(payload, process.env.JWT_SECRET)
+     const token = jsonwebtoken.sign(payload, process.env.JWT_SECRET)
      res.redirect(`http://localhost:5173/redirect?token=${token}`);
 });
 

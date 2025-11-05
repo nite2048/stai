@@ -21,14 +21,20 @@
      padding: 0;
      box-sizing: border-box;
      border: none;
+     font-family: 'Spock';
 }
 
+
 :root{
+     font-size: 16px;
+
      --primary: #f1e735;
-     --faded-primary:#fff6569e;
+     --faded-primary: rgba(241, 231, 53);
+     --fade: rgba(241, 231, 53);
+
+     --pattern: rgba(22, 22, 7, 1);
+     --hidden: rgba(0, 0, 0, 0.8);
+
      --bg: black;
      --accent: white;
-     --fade: rgba(255, 227, 89);
-     font-family: 'Spock';
-     font-size: 16px;
 }

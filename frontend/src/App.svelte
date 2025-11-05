@@ -3,19 +3,25 @@
      import { token } from './lib/stores.js';
 
      import Redirect from './routes/Redirect.svelte';
-     import Success from './routes/Success.svelte';
      import Upload from './routes/Upload.svelte';
-     let current = Upload;
+     import Register from './routes/Register.svelte';
+     import Dashboard from './routes/Dashboard.svelte';
+     import Home from './routes/Home.svelte';
 
-     page('/', () => current = Upload);
-     page('/success', () => current = Success);
+     let current;
+     
+     page('/', () => $token ? page('/dashboard') : current = Home);
+     
+     page('/register', () => $token ? page('/dashboard') : current = Register);
+     page('/dashboard', () => current = Dashboard);
+     page('/upload', () => current = Upload);
 
      page('/redirect', () => {
           current = Redirect;
           const urlParams = new URLSearchParams(window.location.search);
 
           $token = urlParams.get('token');
-          page('/success');
+          page('/dashboard');
      });
 
      page.start();

@@ -1,2 +1,2 @@
-import { writable } from "svelte/store";
-export let token = writable()
+import { persisted } from 'svelte-persisted-store'
+export const token = persisted('token', '')
